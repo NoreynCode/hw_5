@@ -21,7 +21,7 @@ jobs:
         run: cmake . -DPATCH_VERSION=${{ github.run_number }} -DWITH_BOOST_TEST=ON
       
       - name: Build
-        run: cmake --build .
+        run: cmake --build . --parallel
       
       - name: Run tests
         run: cmake --build . --target test
@@ -47,13 +47,13 @@ jobs:
         run: cmake . -DPATCH_VERSION=${{ github.run_number }} -DWITH_BOOST_TEST=ON
       
       - name: Build
-        run: cmake --build .
+        run: cmake --build . --parallel
       
       - name: Package
         run: cmake --build . --target package
       
       - name: Create Release
-        if: github.repository == 'your-username/sfinae'
+        if: github.repository == 'NoreynCode/hw_5'
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -65,12 +65,12 @@ jobs:
           prerelease: false
       
       - name: Upload Release Asset
-        if: github.repository == 'your-username/sfinae'
+        if: github.repository == 'NoreynCode/hw_5'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./sfinae-0.0.${{ github.run_number }}-Linux.deb
-          asset_name: sfinae-0.0.${{ github.run_number }}-Linux.deb
+          asset_path: ./editor-0.0.${{ github.run_number }}-Linux.deb
+          asset_name: editor-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package

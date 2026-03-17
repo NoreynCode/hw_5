@@ -38,7 +38,7 @@ namespace vector_editor {
         return false;
     }
 
-    Document::Shared_ptr DocumentManager::import_from_format(const std::string& path, const std::string& format) {
+    Document::Shared_ptr DocumentManager::import_from_format(const std::string& /*path*/, const std::string& format) {
         if (format == "svg") {
             std::cout << "  Imported from SVG\n";
             return std::make_shared<Document>();

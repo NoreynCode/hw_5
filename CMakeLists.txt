@@ -3,81 +3,135 @@ cmake_minimum_required(VERSION 3.12)
 set(PATCH_VERSION "1" CACHE STRING "Patch version")
 set(PROJECT_VERSION 0.0.${PATCH_VERSION})
 
-project(sfinae VERSION ${PROJECT_VERSION})
+project(Editor VERSION ${PROJECT_VERSION})
 
 option(WITH_BOOST_TEST "Whether to build Boost test" ON)
 
-# Основной исполняемый файл
-add_executable(sfinae src/main.cpp)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Библиотека print_ip
-add_library(print_ip INTERFACE)
-
-target_include_directories(print_ip INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+# Общие include директории
+set(COMMON_INCLUDES
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/document/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/primitives/include
 )
 
-set_target_properties(sfinae PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
+# Библиотека primitives
+add_library(primitives STATIC
+    primitives/src/shape.cpp
+    primitives/src/circle.cpp
+    primitives/src/line.cpp
+    primitives/src/rectangle.cpp
 )
 
-target_include_directories(sfinae
+target_include_directories(primitives 
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/primitives/include
+)
+
+# Библиотека document
+add_library(document STATIC
+    document/src/document.cpp
+    document/src/document_manager.cpp
+)
+
+target_include_directories(document 
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/document/include
+)
+
+target_link_libraries(document
+    PRIVATE
+        primitives
+)
+
+# Библиотека core
+add_library(core STATIC
+    core/src/canvas.cpp
+    core/src/editor.cpp
+    core/src/model.cpp
+)
+
+target_include_directories(core 
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/core/include
+)
+
+target_link_libraries(core
+    PRIVATE
+        primitives
+        document
+)
+
+# Основное приложение
+add_executable(editor src/main.cpp)
+
+target_include_directories(editor
     PRIVATE 
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${COMMON_INCLUDES}
 )
 
-target_link_libraries(sfinae PRIVATE
-    print_ip
+target_link_libraries(editor
+    PRIVATE
+        core
+        document
+        primitives
 )
 
 if(WITH_BOOST_TEST)
     find_package(Boost COMPONENTS unit_test_framework REQUIRED)
     
-    add_executable(sfinae_tests tests/tests.cpp)
+    add_executable(editor_tests tests/tests.cpp)
     
-    set_target_properties(sfinae_tests PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
-    )
-    
-    target_include_directories(sfinae_tests
+    target_include_directories(editor_tests
         PRIVATE 
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${COMMON_INCLUDES}
     )
     
-    set_target_properties(sfinae_tests PROPERTIES
-        COMPILE_DEFINITIONS BOOST_TEST_DYN_LINK
+    target_compile_definitions(editor_tests 
+        PRIVATE 
+            BOOST_TEST_DYN_LINK
     )
     
-    target_link_libraries(sfinae_tests
-        ${Boost_LIBRARIES}
-        print_ip
+    target_link_libraries(editor_tests
+        PRIVATE
+            ${Boost_LIBRARIES}
+            core
+            document
+            primitives
     )
 endif()
 
-if (MSVC)
-    target_compile_options(sfinae PRIVATE /W4)
-    if(WITH_BOOST_TEST)
-        target_compile_options(sfinae_tests PRIVATE /W4)
+function(set_compiler_flags target_name)
+    if (MSVC)
+        target_compile_options(${target_name} PRIVATE /W4)
+    else ()
+        target_compile_options(${target_name} PRIVATE -Wall -Wextra -pedantic -Werror)
     endif()
-else ()
-    target_compile_options(sfinae PRIVATE -Wall -Wextra -pedantic -Werror)
-    if(WITH_BOOST_TEST)
-        target_compile_options(sfinae_tests PRIVATE -Wall -Wextra -pedantic -Werror)
-    endif()
+endfunction()
+
+set_compiler_flags(editor)
+set_compiler_flags(primitives)
+set_compiler_flags(document)
+set_compiler_flags(core)
+
+if(WITH_BOOST_TEST)
+    set_compiler_flags(editor_tests)
 endif()
 
-install(TARGETS sfinae RUNTIME DESTINATION bin)
+install(TARGETS editor RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
+set(CPACK_PACKAGE_NAME "editor")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
-set(CPACK_PACKAGE_CONTACT example@example.com)
+set(CPACK_PACKAGE_CONTACT "example@example.com")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libboost-test-dev")
 include(CPack)
 
 if(WITH_BOOST_TEST)
     enable_testing()
-    add_test(sfinae_tests sfinae_tests)
+    add_test(NAME editor_tests COMMAND editor_tests)
 endif()
