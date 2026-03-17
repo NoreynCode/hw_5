@@ -1,0 +1,8 @@
+/.vs
+/Editor
+/x64
+/tests/Tests
+
+Editor*.*
+doc*.txt
+*.svg
